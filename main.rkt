@@ -2,125 +2,76 @@
 
 (require rackcheck)
 
-; regex-derivative : regex regex-atom -> regex
-(define (regex-derivative re c)
-  (cond 
-    ((regex-empty? re) regex-NULL)
-    ((regex-null? re)  regex-NULL)
-    ((eq? c re)        regex-BLANK)
-    ((regex-atom? re)  regex-NULL)
-    ((match-seq re     (lambda (re1 re2) 
-                         (alt (seq (regex-derivative re1 c) re2)
-                              (seq (regex-empty re1) (regex-derivative re2 c))))))
-    ((match-alt re     (lambda (re1 re2)
-                         (alt (regex-derivative re1 c) (regex-derivative re2 c)))))
-    ((match-rep re     (lambda (pat)
-                         (seq (regex-derivative pat c) (rep pat)))))
-    (else regex-NULL)
+(require "./generator/util.rkt")
+(require "./util/constants.rkt")
+(require "./util/predicates.rkt")
+(require "./util/reducers.rkt")
+(require "./util/structs.rkt")
+
+(define (gen:grammar-derivate-data productions [depth 1] [max-depth 100])
+  (let ([grammar-hash (reduce-production productions)]
+        [rhs (match (car productions) [(Production _ rhs) rhs] [_ ∅])])
+    (gen:_grammar-derivate-data grammar-hash rhs (list '()) depth max-depth)))
+
+(provide gen:grammar-derivate-data)
+
+
+;; IMPLEMENTAÇÕES PRIVADAS
+
+(define (gen:_grammar-derivate-data grammar-hash rhs entries depth max-depth)
+  (let ([derivative-rhs (rhs-derivative grammar-hash rhs (last entries))])
+    derivative-rhs
+    (cond
+      ((> depth max-depth) gen:invalid)
+      ((rhs-empty? derivative-rhs) (gen:const entries))
+      ((rhs-invalid? derivative-rhs) gen:invalid)
+      (else (gen:let ([new-symbol (gen:symbol grammar-hash derivative-rhs)])
+                     (if (rhs-empty? new-symbol)
+                         (gen:const entries)
+                         (gen:_grammar-derivate-data grammar-hash derivative-rhs (flatten (append entries (list new-symbol))) (+ depth 1) max-depth)))))))
+
+(define (gen:symbol grammar-hash rhs)
+  (cond
+    ((rhs-empty? rhs) gen:valid)
+    ((rhs-invalid? rhs) gen:invalid)
+    ((match-terminal rhs (lambda (terminal) (gen:const terminal))))
+    ((rhs-non-terminal? rhs) gen:nothing)
+    ((match-seq rhs (lambda (rhs1 rhs2)
+                      (gen:symbol grammar-hash (if (rhs-empty? rhs1) rhs2 rhs1)))))
+    ((match-alt rhs (lambda (rhs1 rhs2)
+                      (gen:let ([symbol1 (gen:symbol grammar-hash rhs1)]
+                                [symbol2 (gen:symbol grammar-hash rhs2)])
+                               (gen:one-of (list symbol1 symbol2))))))
+    (else ∅)))
+
+
+(define (rhs-derivative grammar-hash rhs symbol)
+  (cond
+    ((rhs-empty? rhs) ∅)
+    ((rhs-invalid? rhs)  ∅)
+    ((match-terminal rhs (lambda (terminal)
+                           (cond
+                             ((eq? terminal symbol) ε)
+                             ((empty? symbol) rhs)
+                             (else ∅)))))
+    ((match-non-terminal rhs (lambda (non-terminal)
+                               (hash-ref grammar-hash non-terminal))))
+    ((match-seq rhs     (lambda (rhs1 rhs2)
+                          (alt (seq (rhs-derivative grammar-hash rhs1 symbol) rhs2)
+                               (seq (rhs-empty grammar-hash rhs1) (rhs-derivative grammar-hash rhs2 symbol))))))
+    ((match-alt rhs     (lambda (rhs1 rhs2)
+                          (alt (rhs-derivative grammar-hash rhs1 symbol) (rhs-derivative grammar-hash rhs2 symbol)))))
+    (else ∅)
     ))
 
-
-; gen:regex-data : regex -> ? // Qual é a interface de saída?
-(define (gen:regex-data re)
-  (gen:_regex-data re))
-
-; regex-match : regex list -> boolean 
-(define (regex-match pattern data)
-  (if (null? data)
-      (regex-empty? (regex-empty pattern))
-      (regex-match (regex-derivative pattern (car data)) (cdr data))))
-
-; Exportação
-(provide regex-match)
-(provide regex-derivative)
-
-;; Constantes.
-(define regex-NULL #f) ; ∅
-(define regex-BLANK #t) ; ε
-
-;; Predicados.
-(define (regex-alt? re)
-  (and (pair? re) (eq? (car re) 'alt)))
-
-(define (regex-seq? re)
-  (and (pair? re) (eq? (car re) 'seq)))
-
-(define (regex-rep? re)
-  (and (pair? re) (eq? (car re) 'rep)))
-
-(define (regex-null? re)
-  (eq? re regex-NULL))
-
-(define (regex-empty? re)
-  (eq? re regex-BLANK))
-
-(define (regex-atom? re)
-  (or (char? re) (symbol? re)))
-
-;; Funções lambda.
-(define (match-seq re lambda)
-  (and (regex-seq? re)
-       (lambda (cadr re) (caddr re))))
-
-(define (match-alt re lambda)
-  (and (regex-alt? re)
-       (lambda (cadr re) (caddr re))))
-
-(define (match-rep re lambda)
-  (and (regex-rep? re)
-       (lambda (cadr re))))
-
-
-;; Simplificadores de predicados.
-(define (seq re1 re2)
+(define (rhs-empty grammar-hash rhs)
   (cond
-    ((regex-null? re1) regex-NULL)
-    ((regex-null? re2) regex-NULL)
-    ((regex-empty? re1) re2)
-    ((regex-empty? re2) re1)
-    (else (list 'seq re1 re2))))
-     
-(define (alt re1 re2)
-  (cond
-    ((regex-null? re1) re2)
-    ((regex-null? re2) re1)
-    (else (list 'alt re1 re2))))
-
-(define (rep pat)
-  (cond
-    ((regex-null? pat) regex-BLANK)
-    ((regex-empty? pat) regex-BLANK)
-    (else (list 'rep pat))))
-
-(define (regex-empty re)
-  (cond
-    ((regex-empty? re) regex-BLANK)
-    ((regex-null? re) regex-NULL)
-    ((regex-atom? re) regex-NULL)
-    ((match-seq re (lambda (re1 re2)
-                     (seq (regex-empty re1) (regex-empty re2)))))
-    ((match-alt re (lambda (re1 re2)
-                     (alt (regex-empty re1) (regex-empty re2)))))
-    ((regex-rep? re) regex-BLANK)
-    (else regex-NULL)))
-
-;; Gerador de entradas
-(define (gen:_regex-data re)
-  (cond
-    ((regex-empty? re) gen:nothing) 
-    ((regex-atom? re) (gen:const re))
-    ((match-seq re (lambda (re1 re2)
-                     (gen:let ([result (gen:tuple (gen:_regex-data re1) (gen:_regex-data re2))])
-                              (flatten result)))))
-    ((match-alt re (lambda (re1 re2)
-                     (gen:choice (gen:_regex-data re1) (gen:_regex-data re2)))))
-    ((match-rep re (lambda (pat)
-                     (gen:let ([head (gen:choice gen:nothing (gen:_regex-data pat))]
-                               [tail (gen:choice gen:nothing (gen:_regex-data (rep pat)))])
-                              (flatten (list head tail))))))
-    (else (error "Wrong regular expression format."))
-  ))
-
-;; Utils
-(define gen:nothing (gen:const null))
-
+    ((rhs-empty? rhs) ε)
+    ((rhs-invalid? rhs) ∅)
+    ((rhs-terminal? rhs) ∅)
+    ((rhs-non-terminal? rhs) ∅)
+    ((match-seq rhs (lambda (rhs1 rhs2)
+                      (seq (rhs-empty grammar-hash rhs1) (rhs-empty grammar-hash rhs2)))))
+    ((match-alt rhs (lambda (rhs1 rhs2)
+                      (alt (rhs-empty grammar-hash rhs1) (rhs-empty grammar-hash rhs2)))))
+    (else ∅)))
