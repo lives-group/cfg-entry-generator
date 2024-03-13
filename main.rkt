@@ -8,12 +8,20 @@
 (require "./util/reducers.rkt")
 (require "./util/structs.rkt")
 
-(define (gen:grammar-derivate-data productions [depth 1] [max-depth 100])
-  (let ([grammar-hash (reduce-production productions)]
-        [rhs (match (car productions) [(Production _ rhs) rhs] [_ ∅])])
+(provide gen:word-from-grammar in-grammar? Production Alt Seq NT T)
+
+;; return - gerador
+(define (gen:word-from-grammar grammar-list [depth 1] [max-depth 100])
+  (let ([grammar-hash (reduce-production grammar-list)]
+        [rhs (match (car grammar-list) [(Production _ rhs) rhs] [_ ∅])])
     (gen:_grammar-derivate-data grammar-hash rhs (list '()) depth max-depth)))
 
-(provide gen:grammar-derivate-data)
+;; grammar-list : (list (Productions ...)) - Primeira produção de partida
+;; word - Lista de símbolos
+(define (in-grammar? grammar-list word)
+  (let ([grammar-hash (reduce-production grammar-list)]
+        [rhs (match (car grammar-list) [(Production (NT _) r) r] [_ ∅])])
+    (check-in-grammar? grammar-hash rhs word)))
 
 
 ;; IMPLEMENTAÇÕES PRIVADAS
@@ -75,3 +83,12 @@
     ((match-alt rhs (lambda (rhs1 rhs2)
                       (alt (rhs-empty grammar-hash rhs1) (rhs-empty grammar-hash rhs2)))))
     (else ∅)))
+
+(define (check-in-grammar? grammar-hash rhs word)
+  (let ([derivative-rhs (rhs-derivative grammar-hash rhs (car word))])
+    (cond
+      ((equal? derivative-rhs ∅) #false)
+      ((equal? derivative-rhs ε) #true)
+      (else (check-in-grammar? grammar-hash derivative-rhs (cdr word)))
+  )))
+

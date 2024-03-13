@@ -23,16 +23,17 @@
 
 (define (non-terminal rhs) (NT rhs))
 
+(define (production-list-to-hash productions)
+  (apply hash (append* productions)))
+
 (define (reduce-production productions)
-  (apply hash (append* (map reduce-production-ruleset productions))))
+  (production-list-to-hash (map reduce-production-ruleset productions)))
 
 (define (reduce-production-ruleset production)
   (match production
     [(Production (NT l) r) (list l (reduce-production-ruleset r))]
     [(Seq l r) (seq (reduce-production-ruleset l) (reduce-production-ruleset r))]
     [(Alt l r) (alt (reduce-production-ruleset l) (reduce-production-ruleset r))]
-    [(NT x) (non-terminal x)]
-    [(T x) (terminal x)]
     [x x]
     ))
 
