@@ -5,6 +5,18 @@
 (require "structs.rkt")
 
 ;; Simplificadores de predicados.
+(define (seq-lazy rhs1-thunk rhs2-thunk)
+  (define rhs1 (rhs1-thunk))
+  (cond
+    [(rhs-invalid? rhs1) ∅]
+    [(rhs-empty? rhs1) (rhs2-thunk)]
+    [else (define rhs2 (rhs2-thunk))
+          (cond
+            [(rhs-invalid? rhs2) ∅]
+            [(rhs-empty? rhs2) rhs1]
+            [else (Seq rhs1 rhs2)])]
+  ))
+
 (define (seq rhs1 rhs2)
   (cond
     ((rhs-invalid? rhs1) ∅)
@@ -37,4 +49,4 @@
     [x x]
     ))
 
-(provide seq alt terminal non-terminal reduce-production)
+(provide seq seq-lazy alt terminal non-terminal reduce-production)
