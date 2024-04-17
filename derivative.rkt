@@ -55,6 +55,16 @@
  )
 
 (test-case
+ "d(εb , b) = ε"
+ (check-equal? (rhs-derivative NOOP-GRAMMAR (Seq ε (T 'b)) 'b) ε)
+ )
+
+(test-case
+ "d(εa , b) = ∅"
+ (check-equal? (rhs-derivative NOOP-GRAMMAR (Seq ε (T 'a)) 'b) ∅)
+ )
+
+(test-case
  "d(ab , b) = ∅"
  (check-equal? (rhs-derivative NOOP-GRAMMAR (Seq (T 'a) (T 'b)) 'b) ∅)
  )
@@ -67,6 +77,16 @@
 (test-case
  "d(a|b , b) = ε"
  (check-equal? (rhs-derivative NOOP-GRAMMAR (Alt (T 'a) (T 'b)) 'b) ε)
+ )
+
+(test-case
+ "d(a|ε , a) = ε"
+ (check-equal? (rhs-derivative NOOP-GRAMMAR (Alt (T 'a) ε) 'a) ε)
+ )
+
+(test-case
+ "d(a|ε , b) = ∅"
+ (check-equal? (rhs-derivative NOOP-GRAMMAR (Alt (T 'a) ε) 'b) ∅)
  )
 
 (test-case
