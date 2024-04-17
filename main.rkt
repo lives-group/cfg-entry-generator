@@ -9,6 +9,7 @@
 (require "./util/reducers.rkt")
 (require "./util/structs.rkt")
 (require "./derivative.rkt")
+(require "./delta.rkt")
 
 (provide gen:word-from-grammar gen:distinct-word-from-grammar in-grammar? Production Alt Seq NT T ∅ ε)
 
@@ -45,14 +46,20 @@
      (define new-result
        (let ([derivative-rhs (if (empty? entries) ∅ (rhs-derivative grammar-hash rhs (last entries) depth max-depth))])
          (cond
-           ((> depth max-depth) gen:invalid)
-           ((rhs-empty? derivative-rhs) (gen:const entries))
-           ((rhs-invalid? derivative-rhs) gen:invalid)
-           (else (gen:let ([new-symbol (gen:symbol grammar-hash derivative-rhs INITIAL-DEPTH max-depth)])
+           [(> depth max-depth) gen:invalid]
+           [(rhs-empty? derivative-rhs) (gen:const entries)]
+           [(rhs-invalid? derivative-rhs) gen:invalid]
+           [else (gen:let ([new-symbol (gen:symbol grammar-hash derivative-rhs INITIAL-DEPTH max-depth)])
                           (cond
-                            ((rhs-invalid? new-symbol) gen:invalid)
-                            ((rhs-empty? new-symbol) (gen:const entries))
-                            (else (gen:_grammar-derivate-data grammar-hash derivative-rhs (flatten (append entries (list new-symbol))) old-results (+ depth 1) max-depth))))))))
+                            [(rhs-invalid? new-symbol) gen:invalid]
+                            [else (gen:_grammar-derivate-data
+                                   grammar-hash
+                                   derivative-rhs
+                                   (flatten (append entries (list new-symbol)))
+                                   old-results
+                                   (+ depth 1)
+                                   max-depth)]))]
+           )))
      (hash-set! old-results (list rhs entries) new-result)
      new-result]
 
@@ -71,7 +78,11 @@
                                )))
     ((rhs-non-terminal? rhs) gen:nothing)
     ((match-seq rhs (lambda (rhs1 rhs2)
-                      (gen:symbol grammar-hash (if (rhs-empty? rhs1) rhs2 rhs1) new-depth max-depth))))
+                      (gen:let ([symbol1 (gen:symbol grammar-hash rhs1 new-depth max-depth)])
+                               (cond
+                                 [(rhs-empty? symbol1) (gen:symbol grammar-hash rhs2 new-depth max-depth)]
+                                 [else symbol1]
+                                 )))))
     ((match-alt rhs (lambda (rhs1 rhs2)
                       (let ([get-symbol1 (thunk (gen:symbol grammar-hash rhs1 new-depth max-depth))]
                             [get-symbol2 (thunk (gen:symbol grammar-hash rhs2 new-depth max-depth))])
