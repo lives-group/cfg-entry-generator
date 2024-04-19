@@ -52,6 +52,7 @@
            [else (gen:let ([new-symbol (gen:symbol grammar-hash derivative-rhs INITIAL-DEPTH max-depth)])
                           (cond
                             [(rhs-invalid? new-symbol) gen:invalid]
+                            [(rhs-empty? new-symbol) (gen:const entries)]
                             [else (gen:_grammar-derivate-data
                                    grammar-hash
                                    derivative-rhs
@@ -84,7 +85,12 @@
                                  [else symbol1]
                                  )))))
     ((match-alt rhs (lambda (rhs1 rhs2)
-                      (let ([get-symbol1 (thunk (gen:symbol grammar-hash rhs1 new-depth max-depth))]
+                      ; Jeito Novo
+                      (let ([alt-list (alt-to-list rhs)])
+                        (gen:let ([get-chosen-symbol (gen:one-of (map (lambda (alternative) (thunk (gen:symbol grammar-hash alternative new-depth max-depth))) alt-list))])
+                                 (get-chosen-symbol)))
+                      ; Jeito Antigo
+                      #;(let ([get-symbol1 (thunk (gen:symbol grammar-hash rhs1 new-depth max-depth))]
                             [get-symbol2 (thunk (gen:symbol grammar-hash rhs2 new-depth max-depth))])
                         (gen:let ([get-chosen-symbol (gen:one-of (list get-symbol1 get-symbol2))])
                                  (get-chosen-symbol))))))

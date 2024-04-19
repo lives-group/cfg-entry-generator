@@ -49,4 +49,10 @@
     [x x]
     ))
 
-(provide seq seq-lazy alt terminal non-terminal reduce-production)
+(define (alt-to-list rhs)
+  (match rhs
+    [(Alt l r) (flatten (list (alt-to-list l) (alt-to-list r)))]
+    [x x]
+    ))
+
+(provide seq seq-lazy alt terminal non-terminal reduce-production alt-to-list)
