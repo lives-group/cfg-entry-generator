@@ -99,9 +99,12 @@
 (define (check-in-grammar? grammar-hash rhs word depth max-depth) ; TODO - depth faz sentido aqui?
   (define symbol (if (empty? word) ε (car word)))
   (define remaining-word (if (empty? word) '() (cdr word)))
-  (let ([derivative-rhs (rhs-derivative grammar-hash rhs symbol depth max-depth)])
-    (cond
-      ((equal? derivative-rhs ∅) #false)
-      ((equal? derivative-rhs ε) #true)
-      (else (check-in-grammar? grammar-hash derivative-rhs remaining-word depth max-depth))
-      )))
+  (if (and (empty? word) (rhs-delta grammar-hash rhs))
+      #t
+      (let ([derivative-rhs (rhs-derivative grammar-hash rhs symbol depth max-depth)])
+        (cond
+          ((equal? derivative-rhs ∅) #false)
+          ((rhs-delta grammar-hash rhs) #true)
+          ((equal? derivative-rhs ε) #true)
+          (else (check-in-grammar? grammar-hash derivative-rhs remaining-word depth max-depth))
+          ))))
