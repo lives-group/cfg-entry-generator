@@ -14,10 +14,10 @@
 (provide gen:word-from-grammar gen:distinct-word-from-grammar in-grammar? Production Alt Seq NT T ∅ ε)
 
 ;; return - gerador
-(define (gen:word-from-grammar grammar-list [depth INITIAL-DEPTH] [max-depth MAX-DEPTH])
-  (let ([grammar-hash (reduce-production grammar-list)]
-        [rhs (match (car grammar-list) [(Production _ rhs) rhs] [_ ∅])])
-    (gen:_grammar-derivate-data grammar-hash rhs (list '()) (make-hash) depth max-depth)))
+(define (gen:word-from-grammar grammar-list [depth INITIAL-DEPTH] [max-depth MAX-DEPTH] #:starting-NT[starting-NT 'NONE])
+  (let ([grammar-hash (reduce-production grammar-list)])
+    (let ([rhs (if (eq? starting-NT 'NONE) (match (car grammar-list) [(Production (NT _) r) r] [_ ∅]) (hash-ref grammar-hash starting-NT))])
+    (gen:_grammar-derivate-data grammar-hash rhs (list '()) (make-hash) depth max-depth))))
 
 ;; return - gerador (palavras unicas
 (define (gen:distinct-word-from-grammar grammar-list [depth INITIAL-DEPTH] [max-depth MAX-DEPTH] [word-set (mutable-set)])
