@@ -32,10 +32,10 @@
 
 ;; grammar-list : (list (Productions ...)) - Primeira produção de partida
 ;; word - Lista de símbolos
-(define (in-grammar? grammar-list word [depth INITIAL-DEPTH] [max-depth MAX-DEPTH])
-  (let ([grammar-hash (reduce-production grammar-list)]
-        [rhs (match (car grammar-list) [(Production (NT _) r) r] [_ ∅])])
-    (check-in-grammar? grammar-hash rhs word depth max-depth)))
+(define (in-grammar? grammar-list word [depth INITIAL-DEPTH] [max-depth MAX-DEPTH] #:starting-NT[starting-NT 'NONE])
+  (let ([grammar-hash (reduce-production grammar-list)])
+    (let ([rhs (if (eq? starting-NT 'NONE) (match (car grammar-list) [(Production (NT _) r) r] [_ ∅]) (hash-ref grammar-hash starting-NT))])
+    (check-in-grammar? grammar-hash rhs word depth max-depth))))
 
 ;; IMPLEMENTAÇÕES PRIVADAS
 (define (gen:_grammar-derivate-data grammar-hash rhs entries old-results depth max-depth)
