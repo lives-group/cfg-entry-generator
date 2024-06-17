@@ -104,7 +104,6 @@
       (let ([derivative-rhs (rhs-derivative grammar-hash rhs symbol depth max-depth)])
         (cond
           ((equal? derivative-rhs ∅) #false)
-          ((rhs-delta grammar-hash rhs) #true)
           ((equal? derivative-rhs ε) #true)
           (else (check-in-grammar? grammar-hash derivative-rhs remaining-word depth max-depth))
           ))))
