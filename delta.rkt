@@ -7,24 +7,24 @@
 (require "./util/reducers.rkt")
 (require "./util/structs.rkt")
 
-(define (rhs-delta grammar-hash rhs [depth INITIAL-DEPTH] [max-depth MAX-DEPTH])
+(define (rhs-delta grammar-hash rhs [depth INITIAL-DEPTH] [max-depth MAX-DEPTH] #:ignore-NT[ignore-NT #f])
   (define new-depth (+ depth 1))
   (cond
     ((> depth max-depth) ∅)
     ((rhs-empty? rhs) ε)
     ((rhs-invalid? rhs) ∅)
     ((rhs-terminal? rhs) ∅)
-    ((match-non-terminal rhs (lambda (non-terminal) (rhs-delta grammar-hash (hash-ref grammar-hash non-terminal ∅) new-depth max-depth))))
+    ((match-non-terminal rhs (lambda (non-terminal) (if (eq? ignore-NT #t) ∅ (rhs-delta grammar-hash (hash-ref grammar-hash non-terminal ∅) new-depth max-depth  #:ignore-NT ignore-NT)))))
     ((match-seq rhs (lambda (rhs1 rhs2)
-                      (seq-lazy (thunk (rhs-delta grammar-hash rhs1 new-depth max-depth)) (thunk (rhs-delta grammar-hash rhs2 new-depth max-depth))))))
+                      (seq-lazy (thunk (rhs-delta grammar-hash rhs1 new-depth max-depth  #:ignore-NT ignore-NT)) (thunk (rhs-delta grammar-hash rhs2 new-depth max-depth  #:ignore-NT ignore-NT))))))
     ((match-alt rhs (lambda (rhs1 rhs2)
-                      (evaluate-alt grammar-hash rhs1 rhs2 new-depth max-depth))))
+                      (evaluate-alt grammar-hash rhs1 rhs2 new-depth max-depth ignore-NT))))
     (else ∅)))
 
-(define (evaluate-alt grammar-hash rhs1 rhs2 depth max-depth)
+(define (evaluate-alt grammar-hash rhs1 rhs2 depth max-depth ignore-NT)
   (cond
     ((or (rhs-empty? rhs1) (rhs-empty? rhs2)) ε)
-    (else (alt (rhs-delta grammar-hash rhs1 depth max-depth) (rhs-delta grammar-hash rhs2 depth max-depth)))
+    (else (alt (rhs-delta grammar-hash rhs1 depth max-depth #:ignore-NT ignore-NT) (rhs-delta grammar-hash rhs2 depth max-depth #:ignore-NT ignore-NT)))
     )
   )
 
