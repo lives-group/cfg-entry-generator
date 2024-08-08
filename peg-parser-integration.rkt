@@ -7,7 +7,7 @@
 (require "./test/greibach.rkt")
 (require "main.rkt")
 
-(require (prefix-in LL-1-Gen: "../ll-1-grammar-generator/glc-gen.rkt"))
+(require (prefix-in LL-1-Gen: "./grammar-generator/glc-gen.rkt"))
  
 (require "../peg-parser/peg-simple-recognizer.rkt")
 (require (prefix-in Peg: "../peg-parser/peg-ast.rkt"))
@@ -44,7 +44,6 @@
 (define (accept-word? ll-1-grammar s)
   (define result (parse ll-1-grammar s))
   (match result
-    ; TODO: Trocar pra PTFail?
     [(PTStr _) #t]
     [_ #f]))
 
@@ -72,22 +71,31 @@
       "\n"
       (string-append (print-rhs (car list)) "\n" (print-grammar (cdr list)))))
 
-(define (test-generated-grammar-as-peg number-of-iterations)
-  (property #:name "test-gen-grammar" ([grammar (LL-1-Gen:gen:naive-ll1-ruleset '(C B A) '(c b a) '(C B A) '())])
-            (and (and (is-ll-1? grammar) ; Se eh LL-1
-                      (is-greibach-normal-form? grammar)) ; Se passa em Greibach
-                 (let ([words (map symbol-list->string (generate-words grammar number-of-iterations))])
-                   (andmap (lambda (word) (accept-word? grammar word)) words)))))
+(define (gen:test-grammar)
+  (LL-1-Gen:gen:naive-ll1-ruleset '(C B A) '(c b a) '(C B A) '()))
 
-(define (test-generated-grammar-as-peg2 number-of-iterations)
-  (property #:name "test-grammar-accept-word" ([grammar (LL-1-Gen:gen:naive-ll1-ruleset '(C B A) '(c b a) '(C B A) '())])
+(define (test-generated-grammar-is-ll-1)
+  (property #:name "test-is-LL(1)" ([grammar (gen:test-grammar)])
+            (is-ll-1? grammar)))
+
+(define (test-generated-grammar-is-greibach)
+  (property #:name "test-is-greibach-normal-form" ([grammar (gen:test-grammar)])
+            (is-greibach-normal-form? grammar)))
+
+(define (test-generated-grammar-as-peg number-of-iterations)
+  (property #:name "test-grammar-parses-peg" ([grammar (gen:test-grammar)])
+            (let ([words (map symbol-list->string (generate-words grammar number-of-iterations))])
+              (andmap (lambda (word) (accept-word? grammar word)) words))))
+
+(define (test-generated-grammar-accept-words number-of-iterations)
+  (property #:name "test-grammar-accept-word" ([grammar (gen:test-grammar)])
             (let ([words (generate-words grammar number-of-iterations)])
-                   (displayln words)
-                   (displayln (print-grammar grammar))
                    (andmap (lambda (word) (in-grammar? grammar word)) words))))
 
 
-#;(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-as-peg 10))
-(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-as-peg2 6))
+(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-is-ll-1))
+(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-is-greibach))
+(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-as-peg 6))
+(check-property (make-config #:tests GRAMMAR_TESTS) (test-generated-grammar-accept-words 6))
 
 (provide test-generated-grammar-as-peg)
