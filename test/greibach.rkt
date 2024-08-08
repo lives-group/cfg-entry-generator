@@ -1,6 +1,9 @@
 #lang racket
 
 (require rackunit)
+(require rackcheck)
+
+(require (prefix-in LL-1-Gen: "../../ll-1-grammar-generator/glc-gen.rkt"))
 
 (require "../util/structs.rkt")
 

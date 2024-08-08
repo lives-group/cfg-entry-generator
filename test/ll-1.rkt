@@ -1,6 +1,9 @@
 #lang racket
 
 (require rackunit)
+(require rackcheck)
+
+(require (prefix-in LL-1-Gen: "../../ll-1-grammar-generator/glc-gen.rkt"))
 
 (require "../util/constants.rkt")
 (require "../util/structs.rkt")
@@ -23,7 +26,7 @@
                  (if (equal? result ε) (get-first-plus-from-rhs lhs r productions) result))]
     [(Alt l r) (flatten (list
                          (get-first-plus-from-rhs lhs l productions)
-                         (get-first-plus-from-rhs lhs r productions)))] ; TODO1: Remover repetições; Tratar vazio (Follow)
+                         (get-first-plus-from-rhs lhs r productions)))]
     [(NT x) (if
              (equal? x lhs)
              (error "Same non-terminal")
