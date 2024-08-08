@@ -27,6 +27,7 @@
 
 (define (alt rhs1 rhs2)
   (cond
+    ((and (rhs-empty? rhs1) (rhs-empty? rhs2)) ε)
     ((rhs-invalid? rhs1) rhs2)
     ((rhs-invalid? rhs2) rhs1)
     (else (Alt rhs1 rhs2))))
